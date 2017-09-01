@@ -9,3 +9,7 @@ SOURCES += main.cpp \
 
 HEADERS += \
     project1_problems.h
+
+INCLUDEPATH += /usr/local/include
+LIBS += -L/usr/local/lib
+LIBS += -larmadillo -llapack -lblas

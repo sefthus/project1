@@ -15,5 +15,5 @@ int main(int argc, char* argv[])
     }
     //problem_1b(n,outfilename);
     //problem_1cd(n,outfilename);
-    problem_1e(n,outfilename);
+    problem_1e(n);
 }
