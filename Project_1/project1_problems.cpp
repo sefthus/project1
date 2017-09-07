@@ -11,21 +11,22 @@ using namespace arma;
 
 using namespace std;
 ofstream ofile;
+
 // Declaring two functions that will be used:
 
 //The analytic solution
 double analytic_func(double x){
-    return (1-(1-exp(-10))*x - exp(-10*x)); //5 FLOPS
+    return (1-(1-exp(-10))*x - exp(-10*x));
 }
 // the source term
 double source_func(double x){
-    return 100*exp(-10*x); //2 FLOPS
+    return 100*exp(-10*x);
 }
 
 
 void problem_1b(int n, char* outfilename){
 
-    double h = 1.0/(n+1); //step size 2 FLOPS
+    double h = 1.0/(n+1);   // step size
 
     //diagonals of the tridiagonalmatrix
     double *a = new double[n+2];
@@ -47,17 +48,17 @@ void problem_1b(int n, char* outfilename){
 
     // we dont use i=0,i=n+2 for a,b,c,f,u so it's fine having all in one loop
     for (int i=0;i<n+2;i++){
-        x[i] = i*h; //1 FLOP
+        x[i] = i*h;
 
         a[i] = -1;
         b[i] = 2;
         c[i] = -1;
 
-        f[i] = h*h*source_func(x[i]);   //2
+        f[i] = h*h*source_func(x[i]);
         u[i] = analytic_func(x[i]);
     }
-    //these are in the l.notes, but not with trygve
-    //Dirch-something Boundary conditions
+
+    //Dirichlet Boundary conditions
     c[n]=0;
     a[1]=0;
 
@@ -70,15 +71,15 @@ void problem_1b(int n, char* outfilename){
     f_tilde[1]=f[1];
     for(int i=2;i<n+1;i++){
         //update RHS
-        b[i] = b[i]-a[i]*c[i-1]/b[i-1]; // 3
-        f_tilde[i] = f[i] -a[i]*f_tilde[i-1]/b[i-1]; // 3
-        // (n-2)*6
+        b[i] = b[i]-a[i]*c[i-1]/b[i-1];
+        f_tilde[i] = f[i] -a[i]*f_tilde[i-1]/b[i-1];
+        // FLOPS: (n-2)*6
     }
     //Backward substitution
-    v[n]=f_tilde[n]/b[n]; // 1
+    v[n]=f_tilde[n]/b[n];
     for(int i=n-1;i>=1;i--){
-        v[i]=(f_tilde[i]-c[i]*v[i+1])/b[i]; // 3
-        // (n-1+1)*3
+        v[i]=(f_tilde[i]-c[i]*v[i+1])/b[i];
+        // FLOPS: (n-2)*3
     }
 
     finish=clock();
@@ -106,13 +107,13 @@ void problem_1b(int n, char* outfilename){
     delete [] x;
     delete [] f;
     delete [] f_tilde;
-    //TOTAL FLOPS ( n-2)*6 + n*3 + 11 above
-    double TFLOPS = ( n-2)*6 + n*3 + 11+5; // 5 on this line
+    //TOTAL FLOPS ( n-2)*6 + (n-2)*3
+    double TFLOPS = ( n-2)*6 + (n-2)*3;
     cout <<"Total number of FLOP: "<< TFLOPS << endl;
 }
 
 void problem_1cd(int n, char* outfilename){
-    double h = 1.0/(n+1); //step size 2 FLOPS
+    double h = 1.0/(n+1); //step size
 
     //diagonal of the tridiagonalmatrix
     double *b = new double[n+2];
@@ -134,29 +135,32 @@ void problem_1cd(int n, char* outfilename){
 
         b[i] = 2;
 
-        f[i] = h*h*source_func(x[i]);   //2
+        f[i] = h*h*source_func(x[i]);
         u[i] = analytic_func(x[i]);
     }
 
+    // adding conditions and calculating the new diagonal up front to reduse FLOPS
+    f_tilde[1]=f[1];
+    for(int i=2;i<n+1;i++){
+        //update RHS
+        b[i] = (double)(i+1)/i;
+    }
+
+    // start timer of algoritim:
     clock_t start, finish;
     start = clock();
 
     //Forward substitution
-    f_tilde[1]=f[1];
     for(int i=2;i<n+1;i++){
         //update RHS
-        b[i] = (double)(i+1)/i; // 2
-        f_tilde[i] = (double)f[i] +(i-1)*f_tilde[i-1]/i; // 4
-        //b[i] -= 1/b[i-1];
-        //f_tilde[i] = f[i] +f_tilde[i-1]/b[i-1];
-        // (n-2)*6
+        f_tilde[i] = f[i] +f_tilde[i-1]/b[i-1];
+        // (n-2)*2
     }
     //Backward substitution
-    v[n]=f_tilde[n]/b[n]; // 1
+    v[n]=f_tilde[n]/b[n];
     for(int i=n;i>=1;i--){
-        v[i-1]=(double)(i-1)/i*(f_tilde[i-1]+v[i]); // 3
-        //v[i] = (f_tilde[i]+v[i+1])/b[i];
-        // (n-1+1)*3
+        v[i-1] = (f_tilde[i-1]+v[i])/b[i-1];
+        // (n-2)*2 + 1
     }
 
     finish=clock();
@@ -175,8 +179,8 @@ void problem_1cd(int n, char* outfilename){
 
     ofile.close();
 
-    //TOTAL FLOPS ( n-2)*6 + n*3 + 11 above
-    double TFLOPS = ( n-2)*6 + n*3 + 11+5; // 5 on this line
+    //TOTAL FLOPS ( n-2)*2 + (n-1)*2 + 1
+    double TFLOPS = ( n-2)*4 +1;
     cout <<"Total number of FLOP: "<< TFLOPS << endl;//at this point in the algorithm
 
     //problem 1d relative error
@@ -260,6 +264,6 @@ void problem_1e(int n){
     lu(L,U,P,A);
 
     //Check that A = LU
-    (A-P*L*U).print("test");
+    //(A-P*L*U).print("test");
 
 }

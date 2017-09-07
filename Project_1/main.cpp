@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
         outfilename = argv[1];
         n = atoi(argv[2]);
     }
-    //problem_1b(n,outfilename);
+    problem_1b(n,outfilename);
     //problem_1cd(n,outfilename);
-    problem_1e(n);
+    //problem_1e(n);
 }
